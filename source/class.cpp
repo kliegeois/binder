@@ -18,6 +18,7 @@
 #include <util.hpp>
 
 #include <fmt/format.h>
+#include <iostream>
 
 #include <clang/AST/DeclTemplate.h>
 //#include <clang/AST/TemplateBase.h>
@@ -139,14 +140,24 @@ bool is_field_assignable(FieldDecl const *f)
 /// check if generator can create binding
 bool is_bindable(FieldDecl *f)
 {
-	if( f->getType()->isAnyPointerType() or f->getType()->isReferenceType() or f->getType()->isArrayType() ) return false;
+	if( f->getType()->isAnyPointerType() or f->getType()->isReferenceType() or f->getType()->isArrayType() ) {
+		std::cout << "is_bindable false 1" << std::endl;
+		return false;
+	}
 
 	//if( !is_field_assignable(f) ) return false;
 
-	if( f->isAnonymousStructOrUnion() ) return false;
+	if( f->isAnonymousStructOrUnion() ) {
+		std::cout << "is_bindable false 2" << std::endl;
+		return false;
+	}
 
-	if( !is_bindable(f->getType()) ) return false;
+	if( !is_bindable(f->getType()) ) {
+		std::cout << "is_bindable false 3" << std::endl;
+		return false;
+	}
 
+	std::cout << "is_bindable true" << std::endl;
 	return true;
 }
 
@@ -186,7 +197,7 @@ bool is_const_overload(CXXMethodDecl *mc)
 		}
 	}
 
-	// outs() << "is_const_overload: " << function_qualified_name(mc, false) << " -> false\n\n";
+	//outs() << "is_const_overload: " << function_qualified_name(mc, false) << " -> false\n\n";
 
 	return false;
 }
@@ -223,6 +234,8 @@ bool is_bindable_raw(clang::CXXRecordDecl const *C);
 /// check if generator can create binding
 bool is_bindable(clang::CXXRecordDecl const *C)
 {
+	std::cout << C->getNameAsString() << " in is_bindable " << std::endl;
+
 	static llvm::DenseMap<CXXRecordDecl const *, bool> cache;
 	auto it = cache.find(C);
 	if( it != cache.end() ) return it->second;
@@ -231,6 +244,9 @@ bool is_bindable(clang::CXXRecordDecl const *C)
 		cache.insert( {C, r} );
 		return r;
 	}
+
+
+	//return is_bindable_raw(C);
 
 	// static std::map<CXXRecordDecl const *, bool> cache;
 	// auto it = cache.find(C);
@@ -247,13 +263,13 @@ bool is_bindable_raw(clang::CXXRecordDecl const *C)
 {
 	bool r = true;
 
-	// outs() << "is_bindable(CXXRecordDecl): " << C->getQualifiedNameAsString() << template_specialization(C)
-	// 	   << " C->hasDefinition():" << C->hasDefinition()
-	// 	   << " C->isCompleteDefinition():" << C->isCompleteDefinition()
-	// 	   // << " C->isThisDeclarationADefinition():" << C->isThisDeclarationADefinition()
-	// 	   // << " C->getDefinition():" << C->getDefinition()
-	// 	   << " C->isDependentType():" << C->isDependentType()
-	// 	   <<"\n";
+	std::cout << "is_bindable(CXXRecordDecl): " << C->getNameAsString() << " " << C->getQualifiedNameAsString() << template_specialization(C)
+	 	   << " C->hasDefinition():" << C->hasDefinition()
+	 	   << " C->isCompleteDefinition():" << C->isCompleteDefinition()
+	 	   // << " C->isThisDeclarationADefinition():" << C->isThisDeclarationADefinition()
+	 	   // << " C->getDefinition():" << C->getDefinition()
+	 	   << " C->isDependentType():" << C->isDependentType()
+	 	   <<"\n";
 	string qualified_name = C->getQualifiedNameAsString();
 	// if( qualified_name != "std::pair"  and  qualified_name != "std::tuple" ) {
 	// 	if( C->isDependentType() ) return false;
@@ -269,34 +285,59 @@ bool is_bindable_raw(clang::CXXRecordDecl const *C)
 
 	// disabling bindings for anonymous namespace's
 	// if( qualified_name.rfind("(anonymous namespace)") != std::string::npos ) return false;
-	if( C->isInAnonymousNamespace() ) return false;
+	if( C->isInAnonymousNamespace() ) {
+		std::cout << "is_bindable_raw false 1" << std::endl;
+		return false;
+	}
 	// if( C->isAnonymousStructOrUnion() ) return false;
-	if( !C->hasNameForLinkage() and !C->isCXXClassMember() ) return false;
+	if( !C->hasNameForLinkage() and !C->isCXXClassMember() ) {
+		std::cout << "is_bindable_raw false 2" << std::endl;
+		return false;
+	}
 
 	bool anonymous_name = qualified_name.rfind(')') != std::string::npos; // check if type name is "(anonymous)"
-	if( anonymous_name and C->hasNameForLinkage() ) return false;
-	if( anonymous_name and !C->hasNameForLinkage() and !C->isAnonymousStructOrUnion() ) return false;
+	if( anonymous_name and C->hasNameForLinkage() ) {
+		std::cout << "is_bindable_raw false 3" << std::endl;
+		return false;
+	}
+	if( anonymous_name and !C->hasNameForLinkage() and !C->isAnonymousStructOrUnion() ) {
+		std::cout << "is_bindable_raw false 4" << std::endl;
+		return false;
+	}
 
 	// if( C->isAnonymousStructOrUnion() and C->hasNameForLinkage() ) return false;
 
 	// outs() << qualified_name << ": anonymous_name:" << anonymous_name << " isAnonymousStructOrUnion: " << C->isAnonymousStructOrUnion() << " hasNameForLinkage:" << C->hasNameForLinkage() << "\n";
 
-	if( C->isDependentType() ) return false;
-	if( C->getAccess() == AS_protected or C->getAccess() == AS_private ) return false;
+	if( C->isDependentType() ) {
+		std::cout << "is_bindable_raw false 5" << std::endl;
+		return false;
+	}
+	if( C->getAccess() == AS_protected or C->getAccess() == AS_private ) {
+		std::cout << "is_bindable_raw false 6" << std::endl;
+		return false;
+	}
 
 	if( !C->isCompleteDefinition() ) {
 		if( auto ts = dyn_cast<ClassTemplateSpecializationDecl>(C) ) {
 			if( qualified_name == "std::function" ) {
-				if( not is_std_function_bindable(C) ) return false;
+				if( not is_std_function_bindable(C) ) {
+					std::cout << "is_bindable_raw false 7" << std::endl;
+					return false;
+				}
 			}
 			else {
 				if( ts->getPointOfInstantiation() /* SourceLocation */.isInvalid() and not is_python_builtin(C) ) {
 					// outs() << "is_bindable( " << qualified_name << " " << class_qualified_name(C) << " ): no point of instantiation  found, skipping...\n";
+					std::cout << "is_bindable_raw false 7" << std::endl;
 					return false;
 				}
 			}
 		}
-		else return false;
+		else {
+			std::cout << "is_bindable_raw false 8" << std::endl;
+			return false;
+		}
 	}
 
 	// if( auto t = dyn_cast<ClassTemplateSpecializationDecl>(C) ) {
@@ -325,8 +366,12 @@ bool is_bindable_raw(clang::CXXRecordDecl const *C)
 	// 	}
 	// }
 
-	if( r && is_banned_symbol(C) ) return false;
+	if( r && is_banned_symbol(C) ) {
+		std::cout << "is_bindable_raw false 9" << std::endl;
+		return false;
+	}
 
+	//std::cout << "is_bindable_raw return r" << std::endl;
 	return r;
 }
 
@@ -593,26 +638,39 @@ bool is_callback_structure_needed(CXXRecordDecl const *C)
 	// check if all pure-virtual methods could be overridden in Python
 	if( C->isAbstract() ) {
 		for( auto m = C->method_begin(); m != C->method_end(); ++m ) {
-			if( m->isPure() and is_const_overload(*m) ) return false; // it is not clear how to deal with this case since we can't overrdie const versions in Python, - so disabling for now
+			if( m->isPure() and is_const_overload(*m) ) {
+				std::cout << "is_callback_structure_needed is false 1 for class " << python_class_name(C) << std::endl;
+				return false; // it is not clear how to deal with this case since we can't overrdie const versions in Python, - so disabling for now
+			}
 		}
 	}
 
-	if( C->hasAttr<FinalAttr>() ) return false;
+	if( C->hasAttr<FinalAttr>() ) {
+		std::cout << "is_callback_structure_needed is false 2 for class " << python_class_name(C) << std::endl;
+		return false;
+	}
 
 	for( auto m = C->method_begin(); m != C->method_end(); ++m ) {
-		if( m->getAccess() != AS_private and is_bindable(*m) and m->isVirtual() and !isa<CXXDestructorDecl>(*m) ) return true;
+		if( m->getAccess() != AS_private and is_bindable(*m) and m->isVirtual() and !isa<CXXDestructorDecl>(*m) ) {
+			std::cout << "is_callback_structure_needed is true 1 for class " << python_class_name(C) << std::endl;
+			return true;
+		}
 	}
 
 	for( auto b = C->bases_begin(); b != C->bases_end(); ++b ) {
 		if( b->getAccessSpecifier() != AS_private ) {
 			if( auto rt = dyn_cast<RecordType>(b->getType().getCanonicalType().getTypePtr()) ) {
 				if( CXXRecordDecl *R = cast<CXXRecordDecl>(rt->getDecl()) ) {
-					if( is_callback_structure_needed(R) ) return true;
+					if( is_callback_structure_needed(R) ) {
+						std::cout << "is_callback_structure_needed is true 2 for class " << python_class_name(C) << std::endl;
+						return true;
+					}
 				}
 			}
 		}
 	}
 
+	std::cout << "is_callback_structure_needed is false 3 for class " << python_class_name(C) << std::endl;
 	return false;
 }
 
@@ -621,21 +679,35 @@ bool is_callback_structure_constructible(CXXRecordDecl const *C)
 {
 	if( C->isAbstract() ) {
 		for( auto m = C->method_begin(); m != C->method_end(); ++m ) {
-			if( m->isPure() and !isa<CXXConstructorDecl>(*m) and (m->getAccess() == AS_private or !is_bindable(*m) or is_skipping_requested(*m, Config::get())) ) return false;
+			//if( m->isPure() and !isa<CXXConstructorDecl>(*m) and (m->getAccess() == AS_private or !is_bindable(*m) or is_skipping_requested(*m, Config::get())) ) {
+			if( m->isPure() and !isa<CXXConstructorDecl>(*m) and (m->getAccess() == AS_private or !is_bindable(*m)) ) {
+				std::cout << "is_callback_structure_constructible is false 1 for class " << python_class_name(C) << " due to method " << m->getNameAsString() << " ";
+				std::cout << "m->getAccess() == AS_private = " << bool(m->getAccess() == AS_private) << " ";
+				std::cout << "!is_bindable(*m) = " << bool(!is_bindable(*m)) << " ";
+				std::cout << "is_skipping_requested(*m, Config::get()) = " << bool(is_skipping_requested(*m, Config::get())) << std::endl;
+				return false;
+			}
 		}
 
 		for( auto b = C->bases_begin(); b != C->bases_end(); ++b ) {
 			if( auto rt = dyn_cast<RecordType>(b->getType().getCanonicalType().getTypePtr()) ) {
 				if( CXXRecordDecl *R = cast<CXXRecordDecl>(rt->getDecl()) ) {
 					if( b->getAccessSpecifier() != AS_private ) {
-						if( !is_callback_structure_constructible(R) ) return false;
+						if( !is_callback_structure_constructible(R) ) {
+							std::cout << "is_callback_structure_constructible is false 2 for class " << python_class_name(C) << std::endl;
+							return false;
+						}
 					}
-					else if( R->isAbstract() ) return false;
+					else if( R->isAbstract() ) {
+						std::cout << "is_callback_structure_constructible is false 3 for class " << python_class_name(C) << std::endl;
+						return false;
+					}
 				}
 			}
 		}
 	}
 
+	std::cout << "is_callback_structure_constructible is true for class " << python_class_name(C) << std::endl;
 	return true;
 }
 
