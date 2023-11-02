@@ -242,6 +242,8 @@ bool is_bindable(clang::CXXRecordDecl const *C)
 	else {
 		bool r = is_bindable_raw(C);
 		cache.insert( {C, r} );
+
+		std::cout << C->getNameAsString() << " " << r << std::endl;
 		return r;
 	}
 
